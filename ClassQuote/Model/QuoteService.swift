@@ -14,7 +14,7 @@ class QuoteService {
     
     // private var task: URLSessionDataTask?
     
-    static func getQuote() {
+    static func getQuote(callback: @escaping (Bool, Quote?) -> Void) {
         // Request
         var request = URLRequest(url: QuoteService.quoteUrl)
         // Request Method
@@ -26,25 +26,32 @@ class QuoteService {
         
         let session = URLSession(configuration: .default)
         let task = session.dataTask(with: request) { data, response, error in guard let data = data, error == nil else {
+            callback(false, nil)
             return
         }
             guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
+                callback(false, nil)
                 return
             }
+            
             guard let responseJSON = try? JSONDecoder().decode([String: String].self, from: data),
                   let text = responseJSON["quoteText"],
                   let author = responseJSON["quoteAuthor"] else {
+                callback(false, nil)
                 return
             }
+            
             getImage { data in
-                print(data)
-                print(text)
-                print(author)
+                guard let data = data else {
+                    callback(false, nil)
+                    return
+                }
+                let quote = Quote(text: text, author: author, imageData: data)
+                callback(true, quote)
             }
         }
-            task.resume()
-        }
-    
+        task.resume()
+    }
     
     private static func getImage(completionHandler: @escaping (Data?) -> Void) {
         let session = URLSession(configuration: .default)

@@ -9,12 +9,17 @@
 import Foundation
 
 class QuoteService {
+    static var shared = QuoteService()
+    private init() {}
+    
     private static let quoteUrl = URL(string: "https://api.forismatic.com/api/1.0/")!
     private static let pictureURL = URL(string: "https://source.unsplash.com/random/1000x1000")!
     
+    private var task: URLSessionDataTask?
+    
     // private var task: URLSessionDataTask?
     
-    static func getQuote(callback: @escaping (Bool, Quote?) -> Void) {
+    func getQuote(callback: @escaping (Bool, Quote?) -> Void) {
         // Request
         var request = URLRequest(url: QuoteService.quoteUrl)
         // Request Method
@@ -25,7 +30,7 @@ class QuoteService {
         request.httpBody = body.data(using: .utf8)
         
         let session = URLSession(configuration: .default)
-        let task = session.dataTask(with: request) { data, response, error in
+        task = session.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 guard let data = data, error == nil else {
                 callback(false, nil)
@@ -43,7 +48,7 @@ class QuoteService {
                     return
                 }
                 
-                getImage { data in
+                self.getImage { data in
                     guard let data = data else {
                         callback(false, nil)
                         return
@@ -53,12 +58,14 @@ class QuoteService {
                 }
             }
         }
-        task.resume()
+        task?.resume()
     }
     
-    private static func getImage(completionHandler: @escaping (Data?) -> Void) {
+    private func getImage(completionHandler: @escaping (Data?) -> Void) {
         let session = URLSession(configuration: .default)
-        let task = session.dataTask(with: pictureURL) { (data, response, error) in
+        
+        task?.cancel()
+        task = session.dataTask(with: QuoteService.pictureURL) { (data, response, error) in
             DispatchQueue.main.async {
             guard let data = data, error == nil else {
             completionHandler(nil)
@@ -71,6 +78,6 @@ class QuoteService {
             completionHandler(data)
         }
         }
-        task.resume()
+        task?.resume()
     }
 }
